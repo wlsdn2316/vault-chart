@@ -1,6 +1,9 @@
 enabled: true
 
 # Service
+vault:
+    enabled: true
+
 mongodb:
     enabled: true
     service:
@@ -1109,37 +1112,3 @@ global:
 #            - name: mongos-conf
 #              configMap:
 #                  name: mongos-conf
-
-vault:
-  # 운영 환경용 Vault를 위한 values 파일입니다.
-  image:
-    repository: "hashicorp/vault"
-    tag: "1.19.5"
-
-  # Vault 서버 Pod 자체에 대한 설정입니다.
-  server:
-  dev:
-    enabled: false
-    port: 8200
-    
-    # 영구 볼륨(Persistent Volume)에 대한 설정입니다.
-    persistentVolume:
-      enabled: true
-      size: "1Gi"
-      # AKS의 경우, "default" 또는 "managed-premium" 같은 스토리지 클래스를 지정해야 할 수 있습니다.
-      storageClass: ""
-
-  # Vault를 내부적으로 노출하는 쿠버네티스 서비스에 대한 설정입니다.
-  service:
-    type: "ClusterIP"
-    port: 8200
-
-  # UI에 대한 설정입니다.
-  ui:
-    enabled: true
-    service:
-      type: "ClusterIP"
-
-  # Vault 에이전트 인젝터(Agent Injector)에 대한 설정입니다.
-  injector:
-    enabled: true
