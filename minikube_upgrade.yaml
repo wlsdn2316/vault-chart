@@ -1,0 +1,1135 @@
+enabled: true
+
+# Service
+mongodb:
+    enabled: true
+    service:
+        type: NodePort
+
+redis:
+    enabled: true
+
+consul:
+    enabled: true
+    server:
+        replicas: 1
+    ui:
+      enabled: false
+
+rabbitmq:
+    enabled: true
+    persistence:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 1Gi
+    service:
+      type: NodePort
+      ports:
+      - name: rabbitmq
+        port: 5672
+        protocol: TCP
+        targetPort: 5672
+        nodePort: 32175        
+      - name: rabbitmq-management
+        port: 15672
+        protocol: TCP
+        targetPort: 15672
+        nodePort: 32176
+
+terraform:
+  enabled: true
+  name: terraform
+  replicas: 1
+  image:
+    name: obskura/terraform
+    version: 24.10.15
+
+console:
+  enabled: true
+  developer: false
+  name: console
+  replicas: 1
+  image:
+      name: obskura/console
+      version: 25.06.17.2
+  imagePullPolicy: IfNotPresent
+
+  production_json:
+      token:
+        token_timeout: 300
+      cors:
+      - https://*
+      - http://*
+      CONSOLE_API:
+        ENDPOINT: https://dev.cloudwiz.ktds.com:8080
+        #              ENDPOINT: https://43.201.231.77:8080
+      DOMAIN_NAME: spaceone
+      DOMAIN_NAME_REF: dev.cloudwiz.ktds.com
+      DOMAIN_IMAGE:
+        CI_LOGO: https://ktds-ci.s3.ap-northeast-2.amazonaws.com/kt+ds+56.png
+        CI_TEXT_WITH_TYPE: https://ktds-ci.s3.ap-northeast-2.amazonaws.com/text_164.svg
+        SIGN_IN: https://ktds-ci.s3.ap-northeast-2.amazonaws.com/kt+ds+1024.png
+        CI_TEXT: https://ktds-ci.s3.ap-northeast-2.amazonaws.com/text_123.png
+      AMCHARTS_LICENSE:
+        ENABLED: false
+        AM5_CHARTS: AM5C416617853
+      RELATED_SITE:
+        NEW_CONSOLE: https://dev.console.cloudwiz.ktds.com
+        #NEW_CONSOLE: https://3.37.70.178
+        SUPPORT_POTAL: https://support.cloudwiz.ktds.com
+        AUTOWIZ_CATALOG: http://auto.cloudwiz.ktds.com/catalog-redirect
+        #AUTOWIZ_CATALOG: https://3.37.70.178/automation/catalog
+        EVENTWIZ: https://3.37.70.178/event-wiz/dashboard
+        ZABBIX: http://13.209.126.203
+      API_PATHS:
+        OKTA_USER_INFO: oauth2/v1/userinfo
+
+
+  service:
+    type: NodePort
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30316
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30847
+
+  pod:
+    spec: {}
+
+console-api:
+  enabled: true
+  developer: false
+  name: console-api
+  replicas: 1
+  image:
+    name: obskura/console-api
+    #version: 25.01.16.1
+    version: 25.06.16.2
+  imagePullPolicy: IfNotPresent
+
+  service:
+    type: NodePort
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 32450
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 80
+      nodePort: 31266
+
+  production_json:
+      cors:
+      - https://*
+      - http://*
+      redis:
+          host: redis
+          port: 6379
+          db: 15
+      billingV2: []
+      logger:
+          handlers:
+          - type: console
+            level: debug
+          - type: file
+            level: info
+            format: json
+            path: "/var/log/spaceone/console-api.log"
+      escalation:
+        enabled: false
+        allowedDomainId: #root-domain
+        apiKey: #root-api-key
+      authentication:
+        exclude:
+        - /check
+        - /api/reflection
+        - /identity/token/issue
+        - /identity/domain/list
+        - /identity/user/get-ip
+        - /add-ons/excel/download
+        - /identity/token/check-mfa-user
+  pod:
+    spec: {}
+
+identity:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/identity
+      # version: 25.03.18.1
+      version: 25.06.16.2
+    imagePullPolicy: IfNotPresent
+    application_grpc:
+      IDENTITY:
+          token:
+            token_timeout: 3600
+            refresh_timeout: 3600
+            refresh_ttl: 12 
+            refresh_once: True
+      HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://localhost:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://localhost:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+      ENDPOINTS:
+      - service: identity
+        name: Identity Service
+        endpoint: grpc://identity:50051/v1
+      - service: inventory
+        name: Inventory Service
+        endpoint: grpc://inventory:50051/v1
+      - service: plugin
+        name: Plugin Manager
+        endpoint: grpc://plugin:50051/v1
+      - service: repository
+        name: Repository Service
+        endpoint: grpc://repository:50051/v1
+      - service: secret
+        name: Secret Manager
+        endpoint: grpc://secret:50051/v1
+      - service: monitoring
+        name: Monitoring Service
+        endpoint: grpc://monitoring:50051/v1
+      - service: config
+        name: Config Service
+        endpoint: grpc://config:50051/v1
+      - service: power_scheduler
+        name: Power Scheduler Service
+        endpoint: grpc://power-scheduler:50051/v1
+      - service: statistics
+        name: Statistics Service
+        endpoint: grpc://statistics:50051/v1
+      - service: billing
+        name: Billing Service
+        endpoint: grpc://billing:50051/v1
+      - service: provisioning
+        name: Provisioning Service
+        endpoint: grpc://provisioning:50051/v1
+
+    pod:
+        spec: {}
+
+secret:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/secret
+      version: 25.06.16.1
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        BACKEND: ConsulConnector
+        CONNECTORS:
+            ConsulConnector:
+                host: spaceone-consul-server
+                port: 8500
+#        BACKEND: AWSSecretManagerConnector
+#        CONNECTORS:
+#            AWSSecretManagerConnector:
+#                aws_access_key_id: ___CHANGE_YOUR_ACCESS_KEY_ID___
+#                aws_secret_access_key: __CHANGE_YOUR_SECRET_ACCESS_KEY__
+#                region_name: __AWS_REGION_NAME__
+    volumeMounts:
+        application_grpc: []
+        application_scheduler: []
+        application_worker: []
+
+    pod:
+        spec: {}       
+
+repository:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/repository
+      #version: 24.4.0
+      version: 25.1.17.1
+    application_grpc:
+#        ROOT_TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        ROOT_TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN
+
+    pod:
+        spec: {}        
+
+plugin:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/plugin
+      version: 25.01.17
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+    scheduler: false
+    worker: false
+    application_scheduler:
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN
+
+    pod:
+        spec: {}        
+        
+config:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/config
+      version: 25.02.07.1
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+    pod:
+        spec: {}
+
+inventory:
+    enabled: true
+    replicas: 1
+    replicas_worker: 1
+    image:
+      name: obskura/inventory
+      version: 25.2.27.1
+    scheduler: true
+    worker: true 
+    application_grpc:
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN
+        collect_queue: collector_q
+
+    application_scheduler:
+        SCHEDULERS:
+          right_size_scheduler:
+            backend: spaceone.inventory.scheduler.right_size_scheduler.RightSizeScheduler
+            interval: 1
+            minute: :55
+            queue: collector_q
+
+          price_collect_scheduler:
+            backend: spaceone.inventory.scheduler.price_collect_scheduler.PriceCollectScheduler
+            interval: 1
+            minute: :50
+            queue: collector_q
+
+          history_scheduler:
+            backend: spaceone.inventory.scheduler.history_scheduler.HistHourlyScheduler
+            interval: 1
+            minute: :35
+            queue: collector_q
+
+          unused_service_scheduler:
+            backend: spaceone.inventory.scheduler.unused_service_scheduler.UnusedServiceScheduler
+            interval: 1
+            minute: :05
+            queue: collector_q
+
+          savings_collect_scheduler:
+            backend: spaceone.inventory.scheduler.savings_collect_scheduler.SavingsCollectScheduler
+            interval: 1
+            minute: :50 #org time : 18
+            queue: collector_q
+
+        # KST
+        SAVINGS_COLLECT_HOUR: 13 #org time : 13
+#
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN        
+
+    application_worker:
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN
+        HANDLERS:
+          authentication: []
+          authorization: []
+          mutation: []
+
+#
+    volumeMounts:
+        application_grpc: []
+        application_scheduler: []
+        application_worker: []
+
+    pod:
+        spec: {}
+
+######################################
+# if you want NLB for spacectl
+# change ClusterIP to LoadBalancer
+#####################################
+
+#    service:
+#      type: LoadBalancer
+#      annotations:
+#          service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+#          external-dns.alpha.kubernetes.io/hostname: inventory.example.com
+#      ports:
+#        - name: grpc
+#          port: 50051
+#          targetPort: 50051
+#          protocol: TCP
+#
+
+monitoring:
+    enabled: true
+    replicas: 1
+    scheduler: true
+    worker: true
+    rest: true
+    image:
+      name: obskura/monitoring 
+      #version: 24.10.23
+      version: 25.03.10.1
+    application_grpc:
+#      WEBHOOK_DOMAIN: https://alert.monitoring.example.com
+      WEBHOOK_DOMAIN: http://cloudwiz.ktds.com:8801 
+#      TOKEN: __CHANGE_YOUR_ROOT_TOKEN___
+      TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+      HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+
+    application_rest:
+#      TOKEN: __CHANGE_YOUR_ROOT_TOKEN___
+      TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+
+    application_scheduler:
+      CONNECTORS:
+          IdentityConnector:
+            endpoint:
+              v1: grpc://identity:50051
+#      TOKEN: __CHANGE_YOUR_ROOT_TOKEN___
+      TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+
+    application_worker:
+#      WEBHOOK_DOMAIN: https://alert.monitoring.example.com
+      WEBHOOK_DOMAIN: http://cloudwiz.ktds.com:8801 
+#      TOKEN: __CHANGE_YOUR_ROOT_TOKEN___
+      TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+
+    pod:
+        spec: {}          
+
+statistics:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/statistics
+      # version: 25.1.16.1 
+      version: 25.03.13.1
+    scheduler: false
+    worker: false
+    application_grpc:
+        CONNECTORS:
+          ServiceConnector:
+            statistics: grpc://localhost:50051/v1
+            identity: grpc://identity:50051/v1
+            inventory: grpc://inventory:50051/v1
+            monitoring: grpc://monitoring:50051/v1
+            cost_analysis: grpc://cost-analysis:50051/v1
+            notification: grpc://notification:50051/v1
+            config: grpc://config:50051/v1
+            secret: grpc://secret:50051/v1
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+    application_scheduler:
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___
+        CONNECTORS:
+          IdentityConnector:
+            endpoint:
+              v1: grpc://identity:50051
+          CostAnalysisConnector:
+            endpoint:
+              v1: grpc://cost-analysis:50051
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server
+            uri: root/api_key/TOKEN
+
+    pod:
+        spec: {}        
+
+notification:
+    enabled: true
+    replicas: 1
+    image:
+      name: obskura/notification
+      version: 25.01.20
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+
+    pod:
+        spec: {}        
+
+cost-analysis:
+    enabled: true 
+    scheduler: true
+    worker: true 
+    replicas: 1
+    replicas_worker: 1
+    image:
+      name: obskura/cost-analysis
+      version: 25.03.13.1
+    # Overwrite scheduler config
+    application_scheduler:
+        SCHEDULERS:
+          data_source_sync_scheduler:
+            backend: spaceone.cost_analysis.interface.task.v1.data_source_sync_scheduler.DataSourceSyncScheduler
+            interval: 1
+            minute: :15
+            queue: cost_analysis_q
+          exchange_sync_scheduler:
+            backend: spaceone.cost_analysis.interface.task.v1.exchange_sync_scheduler.ExchangeSyncScheduler
+            interval: 1
+            minute: :30
+            queue: cost_analysis_q
+          cost_anomaly_detection_sync_scheduler:
+            backend: spaceone.cost_analysis.interface.task.v1.cost_anomaly_detection_scheduler.CostAnomalyDetectionScheduler
+            interval: 1
+            minute: :00
+            queue: cost_anomaly_detection_q
+        DATA_SOURCE_SYNC_HOUR: 15 #utc
+        COST_ANOMALY_DETECTION_HOUR: 19 #kst
+        EXCHANGE_SYNC_HOUR: 2
+        EXCHANGE_REQUEST_URI: www.koreaexim.go.kr
+        EXCHANGE_REQUEST_URN: site/program/financial/exchangeJSON
+        EXCHANGE_API_KEY: GcuuJjxrioHWmfOlmQLvBUX0CC4BF6HC
+        EXCHANGE_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server.spaceone.svc.cluster.local
+            uri: root/api_key/TOKEN
+
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+
+    pod:
+        spec: {}        
+
+board:
+    enabled: true
+    grpc: true
+    scheduler: false
+    worker: false
+    replicas: 1
+    image:
+#      name: public.ecr.aws/megazone/spaceone/board
+#      version: 1.10.4.1
+      name: obskura/board
+      version: 24.4.0
+
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+
+    pod:
+      spec: {}
+    database:
+        DATABASES:
+            default:
+                db: board
+                host: mongodb
+                port: 27017
+                username: board_user
+                password: board_password
+                # authentication_source: admin
+                # read_preference: PRIMARY
+                maxPoolSize: 200
+
+file-manager:
+    enabled: true
+    grpc: true
+    replicas: 1
+    image:
+      name: obskura/file-manager
+      version: 25.02.26.6
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+
+    pod:
+        spec: {}
+
+provisioning:
+    enabled: true
+    image:
+      name: obskura/provisioning
+      #version: 25.01.16.1
+      version: 25.1.21
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    scheduler: false
+    worker: false
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        RABBITMQ:
+          id: guest
+          password: Guest123!@#
+          host: rabbitmq
+          request_queue: PROVISIONING.{}.REQUEST
+          response_queue: PROVISIONING.{}.RESPONSE
+          exchange: PROVISIONING_{}_EXCHANGE_{}
+          routing_key: PROVISIONING_{}_{}
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server.spaceone.svc.cluster.local
+            uri: root/api_key/TOKEN
+
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+
+    pod:
+        spec: {}        
+
+automation:
+    enabled: true
+    image:
+        name: obskura/automation
+        #version: 24.12.10
+        version: 25.2.12
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    scheduler: true
+    worker: true
+    rest: true
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        RABBITMQ:
+          id: guest
+          password: Guest123!@#
+          host: rabbitmq
+          request_queue: ANSIBLE.{}.REQUEST
+          response_queue: ANSIBLE.{}.RESPONSE
+          exchange: ANSIBLE_{}_EXCHANGE_{}
+          routing_key: ANSIBLE_{}_{}
+        TOKEN_INFO:
+          protocol: consul
+          config:
+            host: spaceone-consul-server.spaceone.svc.cluster.local
+          uri: root/api_key/TOKEN
+    application_rest:
+        TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+        RABBITMQ:
+          id: guest
+          password: Guest123!@#
+          host: rabbitmq
+          request_queue: ANSIBLE.{}.REQUEST
+          response_queue: ANSIBLE.{}.RESPONSE
+          exchange: ANSIBLE_{}_EXCHANGE_{}
+          routing_key: ANSIBLE_{}_{}
+          source_system: cloudwizwas01
+          extra_vars:
+            username: user1
+          verbosity: 3
+          credentials:
+            ssh_key: /home/ansible/autowiz-key.pem 
+            username: wizagent
+          
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+
+    pod:
+        spec: {}
+
+governance:
+    enabled: true
+    image:
+        name: obskura/governance
+        #version: 24.11.26
+        version: 25.1.20.1
+    imagePullPolicy: IfNotPresent
+    replicas: 1
+    scheduler: true
+    worker: false
+    rest: true
+    application_rest:
+        TOKEN_INFO:
+          protocol: consul
+          config:
+              host: spaceone-consul-server
+          uri: root/api_key/TOKEN
+        RABBITMQ:
+          id: guest
+          password: Guest123!@#
+          host: rabbitmq
+          request_queue: GOVERNANCE.{}.REQUEST
+          response_queue: GOVERNANCE.{}.RESPONSE
+          exchange: GOVERNANCE.{}.EXCHANGE
+          routing_key: GOVERNANCE_{}_{}
+          request_routing_key: GOVERNANCE.{}.REQUEST_ROUTING_KEY
+          response_routing_key: GOVERNANCE.{}.RESPONSE_ROUTING_KEY
+    application_scheduler:
+      RABBITMQ:
+          id: guest
+          password: Guest123!@#
+          host: rabbitmq
+          request_queue: GOVERNANCE.{}.REQUEST
+          response_queue: GOVERNANCE.{}.RESPONSE
+          exchange: GOVERNANCE.{}.EXCHANGE
+          routing_key: GOVERNANCE_{}_{}
+          request_routing_key: GOVERNANCE.{}.REQUEST_ROUTING_KEY
+          response_routing_key: GOVERNANCE.{}.RESPONSE_ROUTING_KEY
+
+
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+
+    pod:
+        spec: {}
+
+
+prowler:
+  name: prowler
+  enabled: true
+  replicas: 1
+  image:
+    name: obskura/prowler
+    #    version: 24.10.281
+    #version: 24.11.18
+    #version: 24.11.21
+    version: 25.2.7
+  service:
+    grpc:
+      type: ClusterIP
+      annotations:
+        nil: nil
+      ports:
+        - name: grpc
+          port: 50051
+          targetPort: 50051
+          protocal: TCP
+
+
+price-list:
+    enabled: true
+    image:
+      name: obskura/price-list
+      version: 24.12.18
+    imagePullPolicy: IfNotPresent
+    service:
+      grpc:
+        type: NodePort
+        ports:
+        - name: price-list-grpc
+          port: 50051
+          targetPort: 50051
+          nodePort: 31023
+          protocol: TCP
+
+    replicas: 1
+    scheduler: false
+    worker: false
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server.spaceone.svc.cluster.local
+            uri: root/api_key/TOKEN
+        DATABASES:
+            default:
+              db: prices
+              host: localhost
+              port: 30000
+              username: admin
+              password: password
+
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+
+    pod:
+        spec: {}
+
+support:
+    enabled: true
+    grpc: true
+    scheduler: false
+    worker: false
+    replicas: 1
+    image:
+      name: obskura/support
+      version: 25.03.19.1
+    application_grpc:
+        HANDLERS:
+          authentication:
+          - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+            uri: grpc://identity:50051/v1/Domain/get_public_key
+          authorization:
+          - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+            uri: grpc://identity:50051/v1/Authorization/verify
+          mutation:
+          - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+    volumeMounts:
+        application: []
+        application_worker: []
+        application_scheduler: []
+        application_rest: []
+    pod:
+        spec: {}
+
+dashboard: 
+    enabled: false
+
+console-api-v2:
+    enabled: false
+
+marketplace-assets:
+    enabled: false
+
+# include config/alb.yaml (for ALB)
+# include config/nlb.yaml (for NLB)
+supervisor:
+    enabled: true
+    image:
+#      name: spaceone/supervisor
+#      version: 1.10.4.7
+      name: obskura/supervisor
+      version: 25.01.17
+    application: {}
+    application_scheduler:
+        NAME: root
+        HOSTNAME: root-supervisor.svc.cluster.local
+        BACKEND: KubernetesConnector
+        CONNECTORS:
+            RepositoryConnector:
+                endpoint:
+                    v1: grpc://repository.spaceone.svc.cluster.local:50051
+            PluginConnector:
+                endpoint:
+                    v1: grpc://plugin.spaceone.svc.cluster.local:50051
+            KubernetesConnector:
+                namespace: root-supervisor
+                start_port: 50051
+                end_port: 50052
+                headless: true
+                replica:
+                    inventory.Collector: 1
+                    inventory.Collector?aws-ec2: 1
+                    inventory.Collector?aws-cloud-services: 1
+                    inventory.Collector?aws-power-state: 1
+                    monitoring.DataSource: 1
+
+#        TOKEN: ___CHANGE_YOUR_ROOT_TOKEN___ 
+        TOKEN_INFO:
+            protocol: consul
+            config:
+                host: spaceone-consul-server.spaceone.svc.cluster.local
+            uri: root/api_key/TOKEN
+
+    pod:
+        spec: {}
+
+ingress:
+    enabled: true
+
+spaceone-initializer:
+  enabled: false
+  image:
+      name: spaceone/spacectl
+      version: 1.10.4.2
+
+  
+
+#######################################
+# TYPE 1. global variable (for docdb) 
+#######################################
+global:
+    namespace: spaceone
+    supervisor_namespace: root-supervisor
+    backend:
+        sidecar: []
+        volumes: []
+    frontend:
+        sidecar: []
+        volumes: []
+
+    shared_conf:
+        HANDLERS:
+            authentication:
+            - backend: spaceone.core.handler.authentication_handler.AuthenticationGRPCHandler
+              uri: grpc://identity:50051/v1/Domain/get_public_key
+            authorization:
+            - backend: spaceone.core.handler.authorization_handler.AuthorizationGRPCHandler
+              uri: grpc://identity:50051/v1/Authorization/verify
+            mutation:
+            - backend: spaceone.core.handler.mutation_handler.SpaceONEMutationHandler
+        CONNECTORS:
+            IdentityConnector:
+                endpoint:
+                    v1: grpc://identity:50051
+            SecretConnector:
+                endpoint:
+                    v1: grpc://secret:50051
+            RepositoryConnector:
+                endpoint:
+                    v1: grpc://repository:50051
+            PluginConnector:
+                endpoint:
+                    v1: grpc://plugin:50051
+            ConfigConnector:
+                endpoint:
+                    v1: grpc://config:50051
+            InventoryConnector:
+                endpoint:
+                    v1: grpc://inventory:50051
+            MonitoringConnector:
+                endpoint:
+                    v1: grpc://monitoring:50051
+            StatisticsConnector:
+                endpoint:
+                    v1: grpc://statistics:50051
+            BillingConnector:
+                endpoint:
+                    v1: grpc://billing:50051
+            NotificationConnector:
+                endpoint:
+                    v1: grpc://notification:50051
+            PowerSchedulerConnector:
+                endpoint:
+                    v1: grpc://power-scheduler:50051
+            CostAnalysisConnector:
+                endpoint:
+                    v1: grpc://cost-analysis:50051
+            ProvisioningConnector:
+                endpoint:
+                    v1: grpc://provisioning:50051                    
+                    
+        CACHES:
+            default:
+                backend: spaceone.core.cache.redis_cache.RedisCache
+                host: redis
+                port: 6379
+                db: 0
+                encoding: utf-8
+                socket_timeout: 10
+                socket_connect_timeout: 10
+#######################################
+# TYPE 2. global variable (for mongodb cluster)
+#######################################
+#global:
+#    namespace: spaceone
+#    supervisor_namespace: root-supervisor
+#    backend:
+#        sidecar:
+#            - name: mongos
+#              image: mongo:4.4.0-bionic
+#              command: [ 'mongos', '--config', '/mnt/mongos.yml', '--bind_ip_all' ]
+#              volumeMounts:
+#                - name: mongos-conf
+#                  mountPath: /mnt/mongos.yml
+#                  subPath: mongos.yml
+#                  readOnly: true
+#                - name: mongo-shard-key
+#                  mountPath: /opt/mongos/mongo-shard.pem
+#                  subPath: mongo-shard.pem
+#                  readOnly: true
+#        volumes:
+#            - name: mongo-shard-key
+#              secret:
+#                  defaultMode: 0400
+#                  secretName: mongo-shard-key
+#            - name: mongos-conf
+#              configMap:
+#                  name: mongos-conf
+
+vault:
+  enabled: true
+  image:
+    name: hashicorp/vault
+    version: latest
+  port: 8200
+  service:
+    type: ClusterIP
+    ports:
+      - name: http
+        port: 8200
+        targetPort: 8200
