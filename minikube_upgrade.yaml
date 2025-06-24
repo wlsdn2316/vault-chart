@@ -3,6 +3,10 @@ enabled: true
 # Service
 vault:
     enabled: true
+    init:
+        enabled: false  # 수동 초기화를 위해 비활성화
+    healthCheck:
+        enabled: false  # 초기화 과정에서 문제를 피하기 위해 비활성화
 
 mongodb:
     enabled: true
