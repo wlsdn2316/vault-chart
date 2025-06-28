@@ -15,9 +15,9 @@ vault:
               targetPort: 8201
               protocol: TCP
     init:
-        enabled: true  # 수동 초기화를 위해 비활성화
+        enabled: true  # Persistent Volume 사용으로 안전한 자동 초기화 활성화
     healthCheck:
-        enabled: false  # 초기화 과정에서 문제를 피하기 위해 비활성화
+        enabled: true
 
 mongodb:
     enabled: true
