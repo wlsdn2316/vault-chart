@@ -15,7 +15,7 @@ vault:
               targetPort: 8201
               protocol: TCP
     init:
-        enabled: true  # Persistent Volume 사용으로 안전한 자동 초기화 활성화
+        enabled: true  # vault 자동 초기화 활성화
     healthCheck:
         enabled: true
 
